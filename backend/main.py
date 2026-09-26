@@ -46,6 +46,11 @@ def health_check():
         "version": "1.0.0"
     }
 
+# Mount production frontend build if available
+frontend_dist = settings.DATA_DIR.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host=settings.HOST, port=settings.PORT, reload=True)

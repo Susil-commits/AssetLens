@@ -60,10 +60,12 @@ def run_indexing_pipeline(run_id: str, folder_path: str):
         db.commit()
 
         # 2. Query pending assets for this folder
-        pending_assets = db.query(Asset).filter(
-            Asset.status == "PENDING",
-            Asset.path.startswith(str(target_dir))
-        ).all()
+        target_dir_prefix = str(target_dir).lower()
+        all_pending = db.query(Asset).filter(Asset.status == "PENDING").all()
+        pending_assets = [
+            a for a in all_pending
+            if str(Path(a.path).resolve()).lower().startswith(target_dir_prefix)
+        ]
 
         for asset in pending_assets:
             asset.status = "PROCESSING"

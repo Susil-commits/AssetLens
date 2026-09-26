@@ -67,22 +67,25 @@ class VectorDatabase:
     def add_visual_chunks(self, chunks: List[Dict[str, Any]]):
         if not chunks:
             return
-        self.visual_table.add(chunks)
+        with self._lock:
+            self.visual_table.add(chunks)
 
     def add_text_chunks(self, chunks: List[Dict[str, Any]]):
         if not chunks:
             return
-        self.text_table.add(chunks)
+        with self._lock:
+            self.text_table.add(chunks)
 
     def delete_asset_chunks(self, asset_id: str):
-        try:
-            self.visual_table.delete(f"asset_id = '{asset_id}'")
-        except Exception:
-            pass
-        try:
-            self.text_table.delete(f"asset_id = '{asset_id}'")
-        except Exception:
-            pass
+        with self._lock:
+            try:
+                self.visual_table.delete(f"asset_id = '{asset_id}'")
+            except Exception:
+                pass
+            try:
+                self.text_table.delete(f"asset_id = '{asset_id}'")
+            except Exception:
+                pass
 
     def search_visual(self, vector: List[float], limit: int = 20) -> List[Dict[str, Any]]:
         if len(self.visual_table) == 0:

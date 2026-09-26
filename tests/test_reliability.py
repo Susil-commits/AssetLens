@@ -18,26 +18,33 @@ def test_db():
     session.close()
 
 def test_corrupt_file_isolation_and_retry(tmp_path: Path, monkeypatch):
-    # 1. Create a valid image
-    good_img = tmp_path / "valid_photo.jpg"
+    import uuid
+    uid = uuid.uuid4().hex[:8]
+
+    # 1. Create a valid image with unique content
+    good_img = tmp_path / f"valid_photo_{uid}.jpg"
     img = Image.new("RGB", (64, 64), color=(0, 255, 0))
+    img.putpixel((0, 0), (int(uid[:2], 16), int(uid[2:4], 16), int(uid[4:6], 16)))
     img.save(good_img)
 
     # 2. Create an unsupported file
-    unsupported_file = tmp_path / "data_sheet.xyz"
-    unsupported_file.write_bytes(b"some unknown format data")
+    unsupported_file = tmp_path / f"data_sheet_{uid}.xyz"
+    unsupported_file.write_bytes(f"unknown format {uid}".encode())
 
     # 3. Create a corrupted image file
-    corrupt_img = tmp_path / "corrupted_photo.jpg"
-    corrupt_img.write_bytes(b"NOT_A_VALID_JPEG_HEADER_CORRUPTED_BYTES")
+    corrupt_img = tmp_path / f"corrupted_photo_{uid}.jpg"
+    corrupt_img.write_bytes(f"CORRUPT_BYTES_{uid}".encode())
 
-    # Setup DB session
     from backend.database import SessionLocal, init_db
+    import uuid
     init_db()
     db = SessionLocal()
+    # Clean previous test leftovers
+    db.query(Asset).filter(Asset.status == "FAILED").delete()
+    db.commit()
 
     run = IndexRun(
-        id="test_reliability_run_1",
+        id=str(uuid.uuid4()),
         folder_path=str(tmp_path),
         status="RUNNING"
     )
@@ -47,11 +54,13 @@ def test_corrupt_file_isolation_and_retry(tmp_path: Path, monkeypatch):
     # Run the pipeline synchronously for deterministic testing
     run_indexing_pipeline(run.id, str(tmp_path))
 
-    db.refresh(run)
-    assert run.status == "COMPLETED"
-    assert run.failed_files == 1
-    assert run.unsupported_files == 1
-    assert run.indexed_files == 1
+    # Fetch updated run
+    db.expire_all()
+    updated_run = db.query(IndexRun).filter(IndexRun.id == run.id).first()
+    assert updated_run.status == "COMPLETED"
+    assert updated_run.failed_files == 1
+    assert updated_run.unsupported_files == 1
+    assert updated_run.indexed_files == 1
 
     # Check the assets in DB
     valid_asset = db.query(Asset).filter(Asset.path == str(good_img.resolve())).first()
