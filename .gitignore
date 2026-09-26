@@ -1,0 +1,33 @@
+# Python / Virtualenv
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# AssetLens Data & Local DBs
+data/db/
+data/derived/
+data/media/
+*.sqlite
+*.sqlite3
+*.db
+lancedb/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment & Secrets
+.env
+.env.local
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
