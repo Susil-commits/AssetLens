@@ -1,0 +1,86 @@
+[
+  {
+    "id": "Q01",
+    "category": "Visual - Image",
+    "query": "A woman standing with a cat",
+    "user_intent": "Find photo of a woman with or holding a domestic cat",
+    "expected_assets": ["woman_standing_with_cat.jpg", "woman_holding_cat.jpg"]
+  },
+  {
+    "id": "Q02",
+    "category": "Visual / Temporal - Video",
+    "query": "Videos containing construction activity",
+    "user_intent": "Locate video footage of construction work and workers in safety gear",
+    "expected_assets": ["construction_worker_zone.mp4"]
+  },
+  {
+    "id": "Q03",
+    "category": "Visual - Image",
+    "query": "Images showing a modern living room",
+    "user_intent": "Find interior decor photos of modern living rooms with sofas and furniture",
+    "expected_assets": ["living_room_interior.jpg"]
+  },
+  {
+    "id": "Q04",
+    "category": "Document Text - PDF",
+    "query": "Multi-Head Attention and Scaled Dot-Product Attention mechanism",
+    "user_intent": "Find technical research papers explaining Transformer attention formulas",
+    "expected_assets": ["transformer_attention_paper.pdf"]
+  },
+  {
+    "id": "Q05",
+    "category": "Document Text & Visual - PDF",
+    "query": "Deep residual learning framework and shortcut connections",
+    "user_intent": "Find research publications and diagrams describing ResNet architectures",
+    "expected_assets": ["deep_residual_learning_paper.pdf"]
+  },
+  {
+    "id": "Q06",
+    "category": "Visual - Image",
+    "query": "A high speed red sports car on the road",
+    "user_intent": "Find images of sports cars driving on pavement or roads",
+    "expected_assets": ["sports_car_red.jpg"]
+  },
+  {
+    "id": "Q07",
+    "category": "Visual / Temporal - Video",
+    "query": "People and pedestrians walking outdoors on city sidewalk",
+    "user_intent": "Locate video footage showing pedestrians walking in an outdoor urban setting",
+    "expected_assets": ["people_walking_outdoors.mp4"]
+  },
+  {
+    "id": "Q08",
+    "category": "Visual - Image",
+    "query": "Cup of hot coffee or cappuccino with foam latte art",
+    "user_intent": "Find photos of coffee with decorative latte foam on a wooden surface",
+    "expected_assets": ["coffee_latte_art.jpg"]
+  },
+  {
+    "id": "Q09",
+    "category": "Visual - Image",
+    "query": "Doctor or medical professional with stethoscope in clinic",
+    "user_intent": "Find photos of healthcare workers in medical clinic environments",
+    "expected_assets": ["hospital_doctor_stethoscope.jpg"]
+  },
+  {
+    "id": "Q10",
+    "category": "Document Text - PDF",
+    "query": "Trace-based Just-In-Time compilation for JavaScript bytecode",
+    "user_intent": "Find computer science papers detailing SpiderMonkey/TraceMonkey JIT compilation",
+    "expected_assets": ["tracemonkey_compiler_paper.pdf"]
+  },
+  {
+    "id": "Q11",
+    "category": "Visual - Image",
+    "query": "Delicious plate of Italian pasta cuisine",
+    "user_intent": "Find food photography of gourmet pasta dishes with garnish",
+    "expected_assets": ["delicious_pasta_dish.jpg"]
+  },
+  {
+    "id": "Q12",
+    "category": "Out-of-Domain Negative",
+    "query": "Quantum astrophysics wormholes in deep space",
+    "user_intent": "Verify that out-of-domain queries without relevant assets return low confidence or empty results",
+    "expected_assets": []
+  }
+]

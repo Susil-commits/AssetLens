@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.database import Base
-from backend.models import Asset, IndexRun
+from backend.models import Asset, IndexRun, ContentChunk
 from backend.ingestion.indexer import run_indexing_pipeline, retry_failed_assets
 
 @pytest.fixture
@@ -51,43 +51,54 @@ def test_corrupt_file_isolation_and_retry(tmp_path: Path, monkeypatch):
     db.add(run)
     db.commit()
 
-    # Run the pipeline synchronously for deterministic testing
-    run_indexing_pipeline(run.id, str(tmp_path))
+    try:
+        # Run the pipeline synchronously for deterministic testing
+        run_indexing_pipeline(run.id, str(tmp_path))
 
-    # Fetch updated run
-    db.expire_all()
-    updated_run = db.query(IndexRun).filter(IndexRun.id == run.id).first()
-    assert updated_run.status == "COMPLETED"
-    assert updated_run.failed_files == 1
-    assert updated_run.unsupported_files == 1
-    assert updated_run.indexed_files == 1
+        # Fetch updated run
+        db.expire_all()
+        updated_run = db.query(IndexRun).filter(IndexRun.id == run.id).first()
+        assert updated_run.status == "COMPLETED"
+        assert updated_run.failed_files == 1
+        assert updated_run.unsupported_files == 1
+        assert updated_run.indexed_files == 1
 
-    # Check the assets in DB
-    valid_asset = db.query(Asset).filter(Asset.path == str(good_img.resolve())).first()
-    assert valid_asset is not None
-    assert valid_asset.status == "INDEXED"
+        # Check the assets in DB
+        valid_asset = db.query(Asset).filter(Asset.path == str(good_img.resolve())).first()
+        assert valid_asset is not None
+        assert valid_asset.status == "INDEXED"
 
-    unsupported_asset = db.query(Asset).filter(Asset.path == str(unsupported_file.resolve())).first()
-    assert unsupported_asset is not None
-    assert unsupported_asset.status == "UNSUPPORTED"
-    assert unsupported_asset.error_category == "UNSUPPORTED_FORMAT"
+        unsupported_asset = db.query(Asset).filter(Asset.path == str(unsupported_file.resolve())).first()
+        assert unsupported_asset is not None
+        assert unsupported_asset.status == "UNSUPPORTED"
+        assert unsupported_asset.error_category == "UNSUPPORTED_FORMAT"
 
-    corrupt_asset = db.query(Asset).filter(Asset.path == str(corrupt_img.resolve())).first()
-    assert corrupt_asset is not None
-    assert corrupt_asset.status == "FAILED"
-    assert corrupt_asset.error_category == "CORRUPT_FILE"
+        corrupt_asset = db.query(Asset).filter(Asset.path == str(corrupt_img.resolve())).first()
+        assert corrupt_asset is not None
+        assert corrupt_asset.status == "FAILED"
+        assert corrupt_asset.error_category == "CORRUPT_FILE"
 
-    # Now "fix" the corrupt file on disk
-    img_fixed = Image.new("RGB", (64, 64), color=(0, 0, 255))
-    img_fixed.save(corrupt_img)
+        # Now "fix" the corrupt file on disk
+        img_fixed = Image.new("RGB", (64, 64), color=(0, 0, 255))
+        img_fixed.save(corrupt_img)
 
-    # Call retry_failed_assets: it should only touch the failed asset
-    retry_res = retry_failed_assets(db)
-    assert retry_res["total_attempted"] == 1
-    assert retry_res["retried_success"] == 1
+        # Call retry_failed_assets: it should only touch the failed asset
+        retry_res = retry_failed_assets(db)
+        assert retry_res["total_attempted"] == 1
+        assert retry_res["retried_success"] == 1
 
-    db.refresh(corrupt_asset)
-    assert corrupt_asset.status == "INDEXED"
-    assert corrupt_asset.error_category is None
+        db.refresh(corrupt_asset)
+        assert corrupt_asset.status == "INDEXED"
+        assert corrupt_asset.error_category is None
+    finally:
+        # Clean up test assets and index run to prevent catalog pollution
+        from backend.database_vectors import vector_db
+        test_assets = db.query(Asset).filter(Asset.path.like(f"{tmp_path}%")).all()
+        for a in test_assets:
+            vector_db.delete_asset_chunks(a.id)
+            db.query(ContentChunk).filter(ContentChunk.asset_id == a.id).delete()
+            db.delete(a)
+        db.query(IndexRun).filter(IndexRun.id == run.id).delete()
+        db.commit()
+        db.close()
 
-    db.close()

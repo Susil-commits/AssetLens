@@ -48,3 +48,8 @@ def test_process_video_asset(tmp_path: Path, test_db):
     assert all(c.chunk_type == "VIDEO_FRAME" for c in chunks)
     assert all(c.timestamp_sec is not None for c in chunks)
     assert asset.status == "INDEXED"
+
+    # Cleanup vector_db test chunks
+    from backend.database_vectors import vector_db
+    vector_db.delete_asset_chunks(asset.id)
+

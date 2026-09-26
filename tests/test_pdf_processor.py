@@ -62,3 +62,8 @@ def test_process_pdf_asset(tmp_path: Path, test_db):
     # Verify FTS5 insertion
     fts_rows = test_db.execute(text("SELECT * FROM content_chunks_fts WHERE asset_id = :aid"), {"aid": asset.id}).fetchall()
     assert len(fts_rows) >= 2
+
+    # Cleanup vector_db test chunks
+    from backend.database_vectors import vector_db
+    vector_db.delete_asset_chunks(asset.id)
+

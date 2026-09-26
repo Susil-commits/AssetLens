@@ -45,3 +45,7 @@ def test_process_image_asset(tmp_path: Path, test_db):
     # Check that chunk is in DB
     db_chunks = test_db.query(ContentChunk).filter(ContentChunk.asset_id == asset.id).all()
     assert len(db_chunks) == 1
+
+    # Cleanup vector_db test chunk
+    vector_db.delete_asset_chunks(asset.id)
+

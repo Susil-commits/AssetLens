@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     THUMBNAILS_DIR: Path = BASE_DIR / "data" / "derived" / "thumbnails"
 
     SIGLIP_MODEL_NAME: str = "google/siglip-base-patch16-224"
-    TEXT_EMBED_MODEL_NAME: str = "BAAI/bge-m3"
+    TEXT_EMBED_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+
 
     SIMILARITY_THRESHOLD: float = 0.15
     INDEX_SCHEMA_VERSION: int = 1

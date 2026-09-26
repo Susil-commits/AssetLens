@@ -21,6 +21,9 @@ def search_text(query: str, file_type_filter: Optional[str] = None, limit: int =
 
         distance = float(r.get("_distance", 1.0))
         similarity = max(0.0, 1.0 - distance)
+        # Suppress out-of-domain noise that has no meaningful semantic alignment
+        if similarity < 0.28:
+            continue
 
         hits.append({
             "chunk_id": r.get("id"),
