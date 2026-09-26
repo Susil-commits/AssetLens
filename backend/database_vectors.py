@@ -27,9 +27,10 @@ class VectorDatabase:
         self._initialized = True
 
     def _init_tables(self):
-        if hasattr(self.db, "list_tables"):
-            table_names = set(self.db.list_tables())
-        else:
+        try:
+            res = self.db.list_tables()
+            table_names = set(res.tables if hasattr(res, "tables") else res)
+        except Exception:
             table_names = set(self.db.table_names())
 
         if "visual_embeddings" not in table_names:
