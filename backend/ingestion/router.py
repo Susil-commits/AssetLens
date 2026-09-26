@@ -62,6 +62,11 @@ def api_index_status(db: Session = Depends(get_db)):
         "error_summary": latest_run.error_summary
     }
 
+@router.get("/progress")
+def api_index_progress(db: Session = Depends(get_db)):
+    """Returns indexing progress and statistics (alias to /api/index/status)."""
+    return api_index_status(db=db)
+
 @router.post("/retry-failed")
 def api_retry_failed(db: Session = Depends(get_db)):
     """Reprocesses only assets in FAILED status."""

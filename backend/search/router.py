@@ -90,3 +90,46 @@ def list_assets(
             for a in assets
         ]
     }
+
+@router.get("/assets/{asset_id}")
+def get_asset_detail(asset_id: str, db: Session = Depends(get_db)):
+    """Retrieves full metadata and chunk breakdown for a specific asset."""
+    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    chunks = [
+        {
+            "id": c.id,
+            "chunk_type": c.chunk_type,
+            "chunk_index": c.chunk_index,
+            "timestamp_sec": c.timestamp_sec,
+            "page_number": c.page_number,
+            "snippet": c.text_content[:150] if c.text_content else None
+        }
+        for c in asset.chunks
+    ]
+
+    return {
+        "id": asset.id,
+        "filename": asset.filename,
+        "file_type": asset.file_type,
+        "size_bytes": asset.size_bytes,
+        "status": asset.status,
+        "path": asset.path,
+        "file_hash": asset.file_hash,
+        "mtime": asset.mtime,
+        "error_category": asset.error_category,
+        "error_message": asset.error_message,
+        "indexed_at": asset.indexed_at.isoformat() if asset.indexed_at else None,
+        "created_at": asset.created_at.isoformat() if asset.created_at else None,
+        "thumbnail_url": f"/api/thumbnails/{asset.id}.jpg",
+        "preview_url": f"/api/media/{asset.id}",
+        "chunk_count": len(chunks),
+        "chunks": chunks
+    }
+
+@router.get("/assets/{asset_id}/preview")
+def preview_asset_media(asset_id: str, db: Session = Depends(get_db)):
+    """Serves the original media file for preview (alias to /api/media/{asset_id})."""
+    return serve_media_file(asset_id=asset_id, db=db)

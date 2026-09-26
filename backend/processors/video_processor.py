@@ -5,11 +5,16 @@ from typing import List, Dict, Any
 import cv2
 import numpy as np
 from PIL import Image
+import logging
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from backend.config import settings
 from backend.models import Asset, ContentChunk, utc_now
 from backend.ai.model_manager import model_manager
+from backend.ai.transcription import transcriber
 from backend.database_vectors import vector_db
+
+logger = logging.getLogger("assetlens.video_processor")
 
 def compute_sample_timestamps(duration_sec: float) -> List[float]:
     """Computes keyframe sample timestamps according to video duration."""
@@ -67,6 +72,13 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
     # 1. Clean previous chunks for this asset
     vector_db.delete_asset_chunks(asset.id)
     db.query(ContentChunk).filter(ContentChunk.asset_id == asset.id).delete()
+    try:
+        db.execute(
+            text("DELETE FROM content_chunks_fts WHERE asset_id = :asset_id"),
+            {"asset_id": asset.id}
+        )
+    except Exception:
+        pass
 
     cap = cv2.VideoCapture(str(file_path))
     if not cap.isOpened():
@@ -146,9 +158,72 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
     finally:
         cap.release()
 
-    # Bulk insert into LanceDB
+    # Bulk insert visual chunks into LanceDB
     if visual_records:
         vector_db.add_visual_chunks(visual_records)
+
+    # 2. Extract and index speech audio transcripts via faster-whisper
+    text_records: List[Dict[str, Any]] = []
+    try:
+        segments = transcriber.transcribe_video(file_path)
+        for s_idx, seg in enumerate(segments):
+            seg_text = seg.get("text", "").strip()
+            seg_start = seg.get("start", 0.0)
+            if not seg_text:
+                continue
+
+            text_vec = model_manager.encode_text_dense(seg_text)
+            chunk_id = str(uuid.uuid4())
+
+            chunk = ContentChunk(
+                id=chunk_id,
+                asset_id=asset.id,
+                chunk_type="VIDEO_TRANSCRIPT",
+                chunk_index=1000 + s_idx,
+                timestamp_sec=seg_start,
+                page_number=None,
+                text_content=seg_text,
+                embedding_id=chunk_id,
+                embedding_version=settings.EMBEDDING_VERSION,
+                schema_version=settings.INDEX_SCHEMA_VERSION,
+                created_at=utc_now()
+            )
+            db.add(chunk)
+            created_chunks.append(chunk)
+
+            text_records.append({
+                "id": chunk_id,
+                "vector": text_vec,
+                "asset_id": asset.id,
+                "chunk_type": "VIDEO_TRANSCRIPT",
+                "timestamp_sec": float(seg_start),
+                "page_number": -1,
+                "text_content": seg_text,
+                "filename": asset.filename,
+                "path": asset.path
+            })
+
+            # Index in SQLite FTS5 for BM25 keyword matching
+            try:
+                db.execute(
+                    text("""
+                        INSERT INTO content_chunks_fts(chunk_id, asset_id, text_content, filename)
+                        VALUES (:chunk_id, :asset_id, :text_content, :filename)
+                    """),
+                    {
+                        "chunk_id": chunk_id,
+                        "asset_id": asset.id,
+                        "text_content": seg_text,
+                        "filename": asset.filename
+                    }
+                )
+            except Exception as fts_err:
+                logger.warning(f"Failed to index transcript chunk into FTS: {fts_err}")
+    except Exception as trans_err:
+        logger.warning(f"Audio transcription encountered error on {asset.filename}: {trans_err}. Proceeding with visual frames only.")
+
+    if text_records:
+        vector_db.add_text_chunks(text_records)
 
     asset.status = "INDEXED"
     asset.indexed_at = utc_now()

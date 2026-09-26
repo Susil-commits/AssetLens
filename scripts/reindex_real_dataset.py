@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy.orm import Session
 from backend.database import SessionLocal, init_db
 from backend.models import Asset, ContentChunk, IndexRun, utc_now
@@ -23,8 +24,8 @@ def reindex_all():
     all_assets = db.query(Asset).all()
     for a in all_assets:
         resolved_path = str(Path(a.path).resolve()).lower()
-        if not resolved_path.startswith(media_root) or "valid_photo" in a.filename or "corrupted_photo" in a.filename or "data_sheet" in a.filename:
-            print(f"  Removing non-dataset artifact: {a.filename}")
+        if not Path(a.path).exists() or not resolved_path.startswith(media_root) or "valid_photo" in a.filename or "corrupted_photo" in a.filename or "data_sheet" in a.filename:
+            print(f"  Removing stale/artifact asset: {a.filename}")
             vector_db.delete_asset_chunks(a.id)
             db.query(ContentChunk).filter(ContentChunk.asset_id == a.id).delete()
             db.delete(a)

@@ -6,30 +6,48 @@ WEIGHT_VISUAL = 0.50
 WEIGHT_TEXT = 0.35
 WEIGHT_KEYWORD = 0.15
 
+def format_timestamp(ts: float) -> str:
+    """Formats seconds into MM:SS display format."""
+    total_sec = max(0, int(round(ts)))
+    mins = total_sec // 60
+    secs = total_sec % 60
+    return f"{mins:02d}:{secs:02d}"
+
 def build_match_explanation(sources: List[str], best_visual_score: float, best_text_score: float, snippet: str, page: int, ts: float) -> str:
     """Builds a factual, data-grounded explanation for why this item matched."""
     parts = []
-    if "visual" in sources and best_visual_score > 0:
-        conf = int(min(100, max(1, (best_visual_score + 0.15) * 100)))
-        if ts is not None:
-            parts.append(f"Visual scene matched at timestamp {int(ts)}s (confidence: {conf}%)")
-        elif page is not None:
-            parts.append(f"Visual page layout/diagram matched on page {page} (confidence: {conf}%)")
-        else:
-            parts.append(f"Visual scene matched prompt (confidence: {conf}%)")
-
+    
+    # 1. Text & Video Transcript Matches
     if "text" in sources and best_text_score > 0:
-        if page is not None and snippet:
+        if ts is not None and snippet:
+            clean_snip = snippet.replace("\n", " ").strip()
+            if len(clean_snip) > 85:
+                clean_snip = clean_snip[:82] + "..."
+            parts.append(f"Transcript mentions '{clean_snip}' at {format_timestamp(ts)}")
+        elif page is not None and snippet:
             clean_snip = snippet.replace("\n", " ").strip()[:90]
             parts.append(f"Text content matched on page {page}: \"{clean_snip}...\"")
         elif snippet:
             clean_snip = snippet.replace("\n", " ").strip()[:90]
             parts.append(f"Text content matched: \"{clean_snip}...\"")
 
+    # 2. Visual Scene Matches
+    if "visual" in sources and best_visual_score > 0:
+        conf = int(min(100, max(1, (best_visual_score + 0.15) * 100)))
+        if ts is not None and "text" not in sources:
+            parts.append(f"Visual scene matched at {format_timestamp(ts)} (confidence: {conf}%)")
+        elif page is not None:
+            parts.append(f"Visual page layout/diagram matched on page {page} (confidence: {conf}%)")
+        elif ts is None and page is None:
+            parts.append(f"Visual scene matched prompt (confidence: {conf}%)")
+
+    # 3. Keyword Matches
     if "keyword" in sources:
         if snippet and "Filename" in snippet:
             parts.append(snippet)
-        else:
+        elif ts is not None and "text" not in sources:
+            parts.append(f"Spoken keyword matched at {format_timestamp(ts)}")
+        elif "text" not in sources:
             parts.append("Keyword matched in document text")
 
     if not parts:
@@ -85,8 +103,10 @@ def fuse_and_rank_results(
             asset_best_text[aid] = hit["score"]
             if hit.get("text_snippet"):
                 asset_best_snippet[aid] = hit["text_snippet"]
-            if hit["page_number"] is not None:
+            if hit.get("page_number") is not None:
                 asset_best_page[aid] = hit["page_number"]
+            if hit.get("timestamp_sec") is not None:
+                asset_best_timestamp[aid] = hit["timestamp_sec"]
         if aid not in asset_data:
             asset_data[aid] = hit
 
@@ -104,6 +124,8 @@ def fuse_and_rank_results(
         asset_sources[aid].add("keyword")
         if not asset_best_snippet[aid] and hit.get("text_snippet"):
             asset_best_snippet[aid] = hit["text_snippet"]
+        if asset_best_timestamp[aid] is None and hit.get("timestamp_sec") is not None:
+            asset_best_timestamp[aid] = hit["timestamp_sec"]
         if aid not in asset_data:
             asset_data[aid] = hit
 

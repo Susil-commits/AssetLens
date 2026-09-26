@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy.orm import Session
 from backend.database import SessionLocal, init_db
 from backend.models import Asset, ContentChunk
@@ -35,16 +36,16 @@ def run_pdf_search_check():
 
     text_queries = [
         (
-            "Multi-Head Attention and Scaled Dot-Product Attention mechanism",
-            "transformer_attention_paper.pdf"
+            "Documents mentioning 3 BHK apartments at Greenwood Heights Phase 2",
+            "greenwood_heights_residential_brochure.pdf"
         ),
         (
-            "Trace-based Just-In-Time compilation for JavaScript bytecode",
-            "tracemonkey_compiler_paper.pdf"
+            "Master floor plans and residential architecture booklet",
+            "skyline_towers_floor_plans.pdf"
         ),
         (
-            "Deep residual learning framework with shortcut connections",
-            "deep_residual_learning_paper.pdf"
+            "Gated residential community and villa enclave brochure",
+            "oakridge_sanctuary_community_brochure.pdf"
         )
     ]
 
@@ -78,12 +79,12 @@ def run_pdf_search_check():
 
     visual_queries = [
         (
-            "Architecture diagram showing neural network layers and attention flow",
-            "transformer_attention_paper.pdf"
+            "Official brochure cover and residential project layout",
+            "greenwood_heights_residential_brochure.pdf"
         ),
         (
-            "chart of training error and validation curves on ImageNet",
-            "deep_residual_learning_paper.pdf"
+            "Architectural floor plan schematic with room dimensions",
+            "skyline_towers_floor_plans.pdf"
         )
     ]
 

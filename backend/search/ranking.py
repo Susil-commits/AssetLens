@@ -48,8 +48,11 @@ def execute_hybrid_search(
             continue
 
         score = item["relevance_score"]
-        if media_intent and asset.file_type == media_intent:
-            score = round(min(1.0, score * 1.5), 4)
+        if media_intent:
+            if asset.file_type == media_intent:
+                score = round(min(1.0, score * 1.3 + 0.1), 4)
+            else:
+                score = round(score * 0.65, 4)
 
         if score < threshold:
             continue

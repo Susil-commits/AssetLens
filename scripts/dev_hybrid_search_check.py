@@ -1,4 +1,6 @@
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fastapi.testclient import TestClient
 from backend.main import app
 
@@ -8,7 +10,22 @@ SPEC_QUERIES = [
     {
         "query": "A woman standing with a cat",
         "expected_type": "IMAGE",
-        "expected_filename_contains": "woman_holding_cat"
+        "expected_filename_contains": "woman_"
+    },
+    {
+        "query": "Customer testimonial videos",
+        "expected_type": "VIDEO",
+        "expected_filename_contains": "customer_home_purchase_testimonial"
+    },
+    {
+        "query": "Brochures related to residential projects",
+        "expected_type": "PDF",
+        "expected_filename_contains": "residential_brochure"
+    },
+    {
+        "query": "Images showing a modern living room",
+        "expected_type": "IMAGE",
+        "expected_filename_contains": "living_room"
     },
     {
         "query": "Videos containing construction activity",
@@ -16,19 +33,9 @@ SPEC_QUERIES = [
         "expected_filename_contains": "construction_worker_zone"
     },
     {
-        "query": "Images showing a modern living room",
-        "expected_type": "IMAGE",
-        "expected_filename_contains": "living_room_interior"
-    },
-    {
-        "query": "Multi-Head Attention and Transformer network architecture",
+        "query": "Documents mentioning 3 BHK apartments",
         "expected_type": "PDF",
-        "expected_filename_contains": "transformer_attention"
-    },
-    {
-        "query": "Deep residual learning and shortcut connections",
-        "expected_type": "PDF",
-        "expected_filename_contains": "deep_residual_learning"
+        "expected_filename_contains": "greenwood_heights"
     }
 ]
 

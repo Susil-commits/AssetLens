@@ -1,86 +1,93 @@
 [
   {
     "id": "Q01",
-    "category": "Visual - Image",
+    "category": "Visual - Image (Assignment Example)",
     "query": "A woman standing with a cat",
-    "user_intent": "Find photo of a woman with or holding a domestic cat",
+    "user_intent": "Find photo of a woman standing with or holding a domestic cat",
     "expected_assets": ["woman_standing_with_cat.jpg", "woman_holding_cat.jpg"]
   },
   {
     "id": "Q02",
-    "category": "Visual / Temporal - Video",
-    "query": "Videos containing construction activity",
-    "user_intent": "Locate video footage of construction work and workers in safety gear",
-    "expected_assets": ["construction_worker_zone.mp4"]
+    "category": "Speech & Video Transcript (Assignment Example)",
+    "query": "Customer testimonial videos",
+    "user_intent": "Find video footage where a customer speaks on camera reviewing their home purchase experience",
+    "expected_assets": ["customer_home_purchase_testimonial.mp4"]
   },
   {
     "id": "Q03",
-    "category": "Visual - Image",
-    "query": "Images showing a modern living room",
-    "user_intent": "Find interior decor photos of modern living rooms with sofas and furniture",
-    "expected_assets": ["living_room_interior.jpg"]
+    "category": "Document Text & Layout - PDF (Assignment Example)",
+    "query": "Brochures related to residential projects",
+    "user_intent": "Find official real estate brochures and master plans for residential community projects",
+    "expected_assets": ["greenwood_heights_residential_brochure.pdf", "oakridge_sanctuary_community_brochure.pdf", "skyline_towers_floor_plans.pdf"]
   },
   {
     "id": "Q04",
-    "category": "Document Text - PDF",
-    "query": "Multi-Head Attention and Scaled Dot-Product Attention mechanism",
-    "user_intent": "Find technical research papers explaining Transformer attention formulas",
-    "expected_assets": ["transformer_attention_paper.pdf"]
+    "category": "Visual - Image (Assignment Example)",
+    "query": "Images showing a modern living room",
+    "user_intent": "Find interior photographs of contemporary living rooms with sofa, furniture, and large windows",
+    "expected_assets": ["modern_living_room_luxury.jpg", "living_room_interior.jpg"]
   },
   {
     "id": "Q05",
-    "category": "Document Text & Visual - PDF",
-    "query": "Deep residual learning framework and shortcut connections",
-    "user_intent": "Find research publications and diagrams describing ResNet architectures",
-    "expected_assets": ["deep_residual_learning_paper.pdf"]
+    "category": "Visual / Temporal - Video (Assignment Example)",
+    "query": "Videos containing construction activity",
+    "user_intent": "Locate video footage of active construction work, machinery, and workers in safety gear",
+    "expected_assets": ["construction_worker_zone.mp4"]
   },
   {
     "id": "Q06",
-    "category": "Visual - Image",
-    "query": "A high speed red sports car on the road",
-    "user_intent": "Find images of sports cars driving on pavement or roads",
-    "expected_assets": ["sports_car_red.jpg"]
+    "category": "Document Text - PDF",
+    "query": "Documents mentioning 3 BHK apartments",
+    "user_intent": "Find technical brochures and floor plan booklets detailing 3 BHK apartment layouts and room dimensions",
+    "expected_assets": ["greenwood_heights_residential_brochure.pdf", "skyline_towers_floor_plans.pdf", "oakridge_sanctuary_community_brochure.pdf"]
   },
   {
     "id": "Q07",
-    "category": "Visual / Temporal - Video",
-    "query": "People and pedestrians walking outdoors on city sidewalk",
-    "user_intent": "Locate video footage showing pedestrians walking in an outdoor urban setting",
-    "expected_assets": ["people_walking_outdoors.mp4"]
+    "category": "Speech & Dialogue Search - Video",
+    "query": "People talking about their home purchase",
+    "user_intent": "Locate video interviews where a buyer shares spoken testimony about purchasing their home",
+    "expected_assets": ["customer_home_purchase_testimonial.mp4"]
   },
   {
     "id": "Q08",
-    "category": "Visual - Image",
-    "query": "Cup of hot coffee or cappuccino with foam latte art",
-    "user_intent": "Find photos of coffee with decorative latte foam on a wooden surface",
-    "expected_assets": ["coffee_latte_art.jpg"]
+    "category": "Visual Layout & Diagrams - Cross-Modal",
+    "query": "Architectural floor plan drawings with room dimensions",
+    "user_intent": "Find architectural layout schematics showing bedroom, kitchen, and living room dimensions",
+    "expected_assets": ["floor_plan_3bhk_layout.jpg", "skyline_towers_floor_plans.pdf"]
   },
   {
     "id": "Q09",
     "category": "Visual - Image",
-    "query": "Doctor or medical professional with stethoscope in clinic",
-    "user_intent": "Find photos of healthcare workers in medical clinic environments",
-    "expected_assets": ["hospital_doctor_stethoscope.jpg"]
+    "query": "Swimming pool with poolside deck chairs",
+    "user_intent": "Find recreation amenity photos showing outdoor swimming pools and sun loungers",
+    "expected_assets": ["residential_swimming_pool_amenity.jpg"]
   },
   {
     "id": "Q10",
-    "category": "Document Text - PDF",
-    "query": "Trace-based Just-In-Time compilation for JavaScript bytecode",
-    "user_intent": "Find computer science papers detailing SpiderMonkey/TraceMonkey JIT compilation",
-    "expected_assets": ["tracemonkey_compiler_paper.pdf"]
+    "category": "Visual - Image",
+    "query": "Multi-story residential building under construction with cranes",
+    "user_intent": "Find photos of residential high-rise buildings under active construction with scaffolding",
+    "expected_assets": ["residential_building_construction.jpg", "construction_site_crane.jpg"]
   },
   {
     "id": "Q11",
     "category": "Visual - Image",
-    "query": "Delicious plate of Italian pasta cuisine",
-    "user_intent": "Find food photography of gourmet pasta dishes with garnish",
-    "expected_assets": ["delicious_pasta_dish.jpg"]
+    "query": "Family discussing contract documents for property purchase",
+    "user_intent": "Find photos representing home purchase agreements, keys, and buyer closing discussions",
+    "expected_assets": ["family_discussing_home_purchase.jpg"]
   },
   {
     "id": "Q12",
+    "category": "Challenging / Fine-Grained Retrieval",
+    "query": "Compact 2 BHK floor plan diagram",
+    "user_intent": "Locate specific 2 BHK apartment floor plans; evaluates whether the retriever can differentiate 2 BHK vs 3 BHK configurations purely from architectural drawings",
+    "expected_assets": ["skyline_towers_floor_plans.pdf"]
+  },
+  {
+    "id": "Q13",
     "category": "Out-of-Domain Negative",
-    "query": "Quantum astrophysics wormholes in deep space",
-    "user_intent": "Verify that out-of-domain queries without relevant assets return low confidence or empty results",
+    "query": "Quantum astrophysics gravitational wormholes in deep space",
+    "user_intent": "Verify that queries completely out-of-domain return zero high-confidence matches and are appropriately suppressed",
     "expected_assets": []
   }
 ]

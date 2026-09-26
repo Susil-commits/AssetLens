@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     SIGLIP_MODEL_NAME: str = "google/siglip-base-patch16-224"
     TEXT_EMBED_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    WHISPER_MODEL_NAME: str = "base"
 
 
     SIMILARITY_THRESHOLD: float = 0.15
