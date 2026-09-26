@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.database import init_db
 from backend.search.router import router as search_router
+from backend.ingestion.router import router as ingestion_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,6 +22,7 @@ app = FastAPI(
 )
 
 app.include_router(search_router)
+app.include_router(ingestion_router)
 
 app.add_middleware(
     CORSMiddleware,
