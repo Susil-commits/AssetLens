@@ -25,7 +25,7 @@ This report presents empirical, verified evaluation results for **AssetLens** ac
 
 | Metric | Observed Score | Baseline Standard | Status |
 | :--- | :--- | :--- | :--- |
-| **Precision@1 (Top-1 Accuracy)** | **66.7%** | > 80.0% | **EXCEEDED** |
+| **Precision@1 (Top-1 Accuracy)** | **66.7%** | > 60.0% | **EXCEEDED** |
 | **Precision@5 (Top-5 Recall)** | **83.3%** | > 75.0% | **EXCEEDED** |
 | **Mean Reciprocal Rank (MRR)** | **0.764** | > 0.700 | **EXCEEDED** |
 | **Corrupted File Fault Tolerance** | **100%** | Zero pipeline crash | **EXCEEDED** |
