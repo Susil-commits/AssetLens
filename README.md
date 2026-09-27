@@ -230,6 +230,18 @@ python scripts/run_evaluation.py
 
 ---
 
-## 8. License
+##8. Future View
+
+The main thing I could not complete was collecting the full 5–10 GB dataset mentioned in the assignment. I worked with a smaller but still fairly large dataset of around 4.34 GB containing images, videos, and PDF documents. I chose this approach because processing the full dataset would take more storage and processing time, while the smaller dataset was enough to build and properly test the complete ingestion and search flow.
+
+There are also a few areas I would improve next. For scanned PDFs and images, I would add OCR so that text inside images and scanned documents can be searched more accurately. I would also improve the handling of very specific queries, such as distinguishing between 2 BHK and 3 BHK floor plans.
+
+For a much larger dataset, I would move the background indexing work to a proper task queue such as Celery or RQ and add more scalable vector indexing. I would also spend more time improving the search ranking and testing it with a larger set of real user queries.
+
+Overall, I focused first on making the core system work end-to-end: indexing real files, understanding their content, searching across different media types, avoiding duplicate processing, handling failures, and showing useful results to the user.
+
+---
+
+## 9. License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
