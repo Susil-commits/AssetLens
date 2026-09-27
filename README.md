@@ -16,10 +16,6 @@
 </div>
 
    </div>
-
-   ## Demo
-
-   ![AssetLens Demo](./Demo.mp4)
    
 ---
 
