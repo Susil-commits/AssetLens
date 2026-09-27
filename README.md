@@ -133,7 +133,7 @@ AssetLens returns dynamic explanations for why an item matched:
 
 ## 4. Benchmark Retrieval Evaluation
 
-Evaluation performed on a real local catalog of **99 multimodal assets (~1.25 GB)** — 62 high-resolution images, 28 videos (Blender open movies, Pexels 4K footage, spoken Matplotlib tutorial series with rich transcribable speech, and original dataset), and 9 PDF documents (real-estate brochures + arXiv ML papers) — yielding an estimated **~592 content chunks** (~462 visual SigLIP embeddings, ~130 dense text/speech embeddings, full SQLite FTS5 BM25 index) across 13 diverse search tasks including the assignment's literal benchmark queries.
+Evaluation performed on a curated **31-asset benchmark subset** — 25 images (residential interiors, construction sites, lifestyle, animals), 3 domain benchmark videos (spoken customer testimonial, construction zone, pedestrian motion), and 3 multi-page real-estate PDF brochures — yielding **72 content chunks** (53 visual SigLIP embeddings, 19 dense text/speech embeddings, full SQLite FTS5 BM25 index) across **13 diverse search tasks** including all 5 of the assignment's literal benchmark queries. The full catalog contains **233 indexed assets (~4.34 GB)** — see [`DATASET.md`](DATASET.md) for the complete breakdown.
 
 | Benchmark Metric | Observed Score | Baseline Standard | Status |
 | :--- | :--- | :--- | :--- |
@@ -193,10 +193,10 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
 ### 5. Run Test Suite & Evaluation
 ```bash
-# Run all 14 unit and integration tests
+# Run the full unit and integration test suite
 pytest
 
-# Run the 12-query benchmark retrieval evaluation
+# Run the 13-query benchmark retrieval evaluation
 python scripts/run_evaluation.py
 ```
 

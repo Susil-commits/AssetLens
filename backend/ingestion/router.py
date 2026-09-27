@@ -16,12 +16,17 @@ def api_start_indexing(
     req: Optional[StartIndexRequest] = None,
     db: Session = Depends(get_db)
 ):
-    """Triggers asynchronous indexing on the media directory or custom folder."""
+    """Triggers asynchronous indexing on the media directory or custom folder.
+
+    Returns 409 Conflict if an indexing run is already active.
+    """
     path = req.folder_path if req else None
     try:
         return start_indexing(folder_path=path, db=db)
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 @router.get("/status")
 def api_index_status(db: Session = Depends(get_db)):

@@ -112,8 +112,21 @@ def run_indexing_pipeline(run_id: str, folder_path: str):
         db.close()
 
 def start_indexing(folder_path: Optional[str] = None, db: Optional[Session] = None) -> Dict[str, Any]:
-    """Starts asynchronous indexing run and returns run information."""
+    """Starts asynchronous indexing run and returns run information.
+
+    Raises:
+        FileNotFoundError: if the target folder does not exist.
+        ValueError: if an indexing run is already in progress (returns HTTP 409 via router).
+    """
     global _ACTIVE_RUN_ID
+
+    # Fix 3: Guard concurrent calls — reject immediately if a run is already active.
+    if _ACTIVE_RUN_ID is not None:
+        raise ValueError(
+            f"Indexing already in progress (run_id={_ACTIVE_RUN_ID}). "
+            "Wait for it to complete or check /api/index/progress."
+        )
+
     target = folder_path or str(settings.MEDIA_DIR)
     target_path = Path(target).resolve()
     if not target_path.exists():
@@ -153,35 +166,46 @@ def start_indexing(folder_path: Optional[str] = None, db: Optional[Session] = No
         if close_db:
             db.close()
 
+def _run_retry_pipeline() -> None:
+    """Background worker: re-processes all FAILED assets without blocking the API thread."""
+    db: Session = SessionLocal()
+    try:
+        failed_assets = db.query(Asset).filter(Asset.status == "FAILED").all()
+        logger.info(f"Retry pipeline started: {len(failed_assets)} failed assets to retry.")
+        for asset in failed_assets:
+            try:
+                if asset.file_type == "IMAGE":
+                    process_image_asset(asset, db)
+                elif asset.file_type == "PDF":
+                    process_pdf_asset(asset, db)
+                elif asset.file_type == "VIDEO":
+                    process_video_asset(asset, db)
+                logger.info(f"Retry succeeded: {asset.filename}")
+            except Exception as e:
+                asset.status = "FAILED"
+                asset.error_category = classify_error(e)
+                asset.error_message = str(e)
+                db.commit()
+                logger.warning(f"Retry still failing: {asset.filename} — {e}")
+    except Exception as e:
+        logger.error(f"Retry pipeline encountered fatal error: {e}", exc_info=True)
+    finally:
+        db.close()
+
+
 def retry_failed_assets(db: Session) -> Dict[str, Any]:
-    """Finds all FAILED assets and attempts re-processing."""
-    failed_assets = db.query(Asset).filter(Asset.status == "FAILED").all()
-    count = len(failed_assets)
+    """Fix 1: Spawns retry processing on a background thread to avoid blocking the HTTP response.
+
+    Returns immediately with a count of queued assets; processing continues asynchronously.
+    """
+    count = db.query(Asset).filter(Asset.status == "FAILED").count()
     if count == 0:
-        return {"retried_count": 0, "message": "No failed assets to retry"}
+        return {"queued_count": 0, "message": "No failed assets to retry"}
 
-    retried_success = 0
-    retried_failed = 0
-
-    for asset in failed_assets:
-        try:
-            if asset.file_type == "IMAGE":
-                process_image_asset(asset, db)
-            elif asset.file_type == "PDF":
-                process_pdf_asset(asset, db)
-            elif asset.file_type == "VIDEO":
-                process_video_asset(asset, db)
-            retried_success += 1
-        except Exception as e:
-            asset.status = "FAILED"
-            asset.error_category = classify_error(e)
-            asset.error_message = str(e)
-            db.commit()
-            retried_failed += 1
+    thread = threading.Thread(target=_run_retry_pipeline, daemon=True)
+    thread.start()
 
     return {
-        "total_attempted": count,
-        "retried_success": retried_success,
-        "retried_failed": retried_failed,
-        "message": f"Retried {count} failed assets ({retried_success} succeeded, {retried_failed} still failing)"
+        "queued_count": count,
+        "message": f"{count} failed asset(s) queued for retry in background. Check /api/index/status for progress."
     }

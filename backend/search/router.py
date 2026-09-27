@@ -1,12 +1,69 @@
 import mimetypes
+import re
+import os
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Asset
 from backend.search.ranking import execute_hybrid_search
+
+CHUNK_SIZE = 1024 * 64  # 64 KB streaming chunks
+
+
+def _stream_with_range(file_path: Path, request: Request, mime_type: str, filename: str) -> Response:
+    """Fix 2: Serve a file with HTTP Range (byte-range) support for seekable video playback.
+
+    Returns 206 Partial Content when a Range header is present, or a full 200 response
+    that advertises Accept-Ranges so the browser knows it can seek later.
+    """
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get("range")
+
+    headers_base = {
+        "Accept-Ranges": "bytes",
+        "Content-Disposition": f'inline; filename="{filename}"',
+    }
+
+    if range_header:
+        match = re.match(r"bytes=(\d*)-(\d*)", range_header)
+        if match:
+            start = int(match.group(1)) if match.group(1) else 0
+            end = int(match.group(2)) if match.group(2) else file_size - 1
+            end = min(end, file_size - 1)
+            length = end - start + 1
+
+            def _iter_range(start: int, length: int):
+                with open(file_path, "rb") as f:
+                    f.seek(start)
+                    remaining = length
+                    while remaining > 0:
+                        chunk = f.read(min(CHUNK_SIZE, remaining))
+                        if not chunk:
+                            break
+                        remaining -= len(chunk)
+                        yield chunk
+
+            return StreamingResponse(
+                _iter_range(start, length),
+                status_code=206,
+                media_type=mime_type,
+                headers={
+                    **headers_base,
+                    "Content-Range": f"bytes {start}-{end}/{file_size}",
+                    "Content-Length": str(length),
+                },
+            )
+
+    # No Range header — serve full file with Accept-Ranges advertised
+    return FileResponse(
+        path=str(file_path),
+        media_type=mime_type,
+        filename=filename,
+        headers=headers_base,
+    )
 
 router = APIRouter(prefix="/api", tags=["search"])
 
@@ -31,8 +88,8 @@ def search_assets(
     )
 
 @router.get("/media/{asset_id}")
-def serve_media_file(asset_id: str, db: Session = Depends(get_db)):
-    """Serves the original media file for in-browser preview."""
+def serve_media_file(asset_id: str, request: Request, db: Session = Depends(get_db)):
+    """Streams the original media file with HTTP Range support for seekable video playback."""
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -45,11 +102,7 @@ def serve_media_file(asset_id: str, db: Session = Depends(get_db)):
     if not mime_type:
         mime_type = "application/octet-stream"
 
-    return FileResponse(
-        path=str(file_path),
-        media_type=mime_type,
-        filename=asset.filename
-    )
+    return _stream_with_range(file_path, request, mime_type, asset.filename)
 
 @router.get("/assets")
 def list_assets(
@@ -130,6 +183,6 @@ def get_asset_detail(asset_id: str, db: Session = Depends(get_db)):
     }
 
 @router.get("/assets/{asset_id}/preview")
-def preview_asset_media(asset_id: str, db: Session = Depends(get_db)):
-    """Serves the original media file for preview (alias to /api/media/{asset_id})."""
-    return serve_media_file(asset_id=asset_id, db=db)
+def preview_asset_media(asset_id: str, request: Request, db: Session = Depends(get_db)):
+    """Serves the original media file for preview with Range support (alias to /api/media/{asset_id})."""
+    return serve_media_file(asset_id=asset_id, request=request, db=db)

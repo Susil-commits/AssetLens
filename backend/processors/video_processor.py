@@ -164,6 +164,7 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
 
     # 2. Extract and index speech audio transcripts via faster-whisper
     text_records: List[Dict[str, Any]] = []
+    fts_rows: List[Dict[str, Any]] = []   # Fix 4: collect for batch insert
     try:
         segments = transcriber.transcribe_video(file_path)
         for s_idx, seg in enumerate(segments):
@@ -203,27 +204,33 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
                 "path": asset.path
             })
 
-            # Index in SQLite FTS5 for BM25 keyword matching
+            # Fix 4: accumulate FTS5 rows instead of inserting one-by-one
+            fts_rows.append({
+                "chunk_id": chunk_id,
+                "asset_id": asset.id,
+                "text_content": seg_text,
+                "filename": asset.filename,
+            })
+
+        # Fix 4: single batch insert for all transcript segments
+        if fts_rows:
             try:
                 db.execute(
                     text("""
                         INSERT INTO content_chunks_fts(chunk_id, asset_id, text_content, filename)
                         VALUES (:chunk_id, :asset_id, :text_content, :filename)
                     """),
-                    {
-                        "chunk_id": chunk_id,
-                        "asset_id": asset.id,
-                        "text_content": seg_text,
-                        "filename": asset.filename
-                    }
+                    fts_rows,
                 )
             except Exception as fts_err:
-                logger.warning(f"Failed to index transcript chunk into FTS: {fts_err}")
+                logger.warning(f"Failed to batch-insert transcript chunks into FTS: {fts_err}")
+
     except Exception as trans_err:
         logger.warning(f"Audio transcription encountered error on {asset.filename}: {trans_err}. Proceeding with visual frames only.")
 
     if text_records:
         vector_db.add_text_chunks(text_records)
+
 
     asset.status = "INDEXED"
     asset.indexed_at = utc_now()

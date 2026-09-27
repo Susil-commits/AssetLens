@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 from PIL import Image
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from backend.config import settings
 from backend.models import Asset, ContentChunk, utc_now
 from backend.ai.model_manager import model_manager
@@ -31,6 +32,13 @@ def process_image_asset(asset: Asset, db: Session) -> ContentChunk:
     # 1. Clean previous chunks for this asset if any
     vector_db.delete_asset_chunks(asset.id)
     db.query(ContentChunk).filter(ContentChunk.asset_id == asset.id).delete()
+    try:
+        db.execute(
+            text("DELETE FROM content_chunks_fts WHERE asset_id = :asset_id"),
+            {"asset_id": asset.id}
+        )
+    except Exception:
+        pass
 
     # 2. Thumbnail generation
     thumb_path = settings.THUMBNAILS_DIR / f"{asset.id}.jpg"
@@ -68,7 +76,25 @@ def process_image_asset(asset: Asset, db: Session) -> ContentChunk:
         "path": asset.path
     }])
 
-    # 6. Update Asset status
+    # 6. Index filename in FTS5 for keyword search (e.g. "kitchen", "nature", "real_estate")
+    stem = Path(asset.filename).stem.replace("_", " ").replace("-", " ")
+    try:
+        db.execute(
+            text("""
+                INSERT INTO content_chunks_fts(chunk_id, asset_id, text_content, filename)
+                VALUES (:chunk_id, :asset_id, :text_content, :filename)
+            """),
+            {
+                "chunk_id": chunk_id,
+                "asset_id": asset.id,
+                "text_content": stem,
+                "filename": asset.filename
+            }
+        )
+    except Exception:
+        pass
+
+    # 7. Update Asset status
     asset.status = "INDEXED"
     asset.indexed_at = utc_now()
     asset.error_category = None
