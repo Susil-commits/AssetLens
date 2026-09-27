@@ -6,10 +6,10 @@ This document describes the benchmark multimodal dataset curated, indexed, and e
 
 ## 1. Dataset Overview
 
-AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing dataset** covering **3 core modalities** across **89 files totalling ~808 MB**:
+AssetLens is benchmarked on a **real-estate, nature, technology, and multimodal marketing dataset** covering **3 core modalities** across **99 files totalling ~1.25 GB**:
 
 - **Images (62 files)**: High-resolution 1920 px photos (Unsplash CC0) spanning residential interiors (living rooms, bedrooms, kitchens, bathrooms, home offices), real estate exteriors (aerial, rooftop, garden), active construction sites (workers, scaffolding, blueprints, concrete pours), nature/landscapes (aurora, desert dunes, lavender fields, waterfalls, forests), people/lifestyle (yoga, chef, scientist, surfer), technology (servers, drones, laptops), food, animals, and urban cityscapes.
-- **Videos (7 files, MP4)**: Dynamic temporal footage combining visual keyframe sampling and speech transcription:
+- **Videos (28 files, MP4)**: Dynamic temporal footage combining visual keyframe sampling and speech transcription:
   - A spoken **Customer Testimonial Video** with timestamped dialogue transcribed via `faster-whisper`.
   - An **Industrial Construction Zone** video showing machinery and workers.
   - An **Outdoor Pedestrian Motion** video capturing sidewalk movement.
@@ -17,17 +17,19 @@ AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing da
   - **Elephants Dream** (Blender Foundation CC BY) — surreal animated short film.
   - **Sintel Trailer** (Blender Foundation CC BY) — fantasy outdoor animated trailer.
   - **Nature Wildlife Documentary** (Pexels free license) — wildlife footage.
+  - **Matplotlib Tutorial Series** (10 videos, ~446 MB) — spoken instructional videos with rich transcribable speech content covering data visualization concepts.
+  - **Aerial/landscape/nature footage** (Pexels, various resolutions up to 4K).
 - **Documents (8 files, multi-page PDF)**: Three domain-specific real-estate brochures ("3 BHK", "amenities", "swimming pool") plus five open-access academic papers (Attention/Transformer, ResNet, BERT, GAN, CLIP) containing dense technical text, mathematical notation, and figure-rich layouts.
 
 ### Summary Metrics
 | Modality | File Count | Estimated Visual Chunks | Estimated Text Chunks | Storage Size |
 | :--- | :--- | :--- | :--- | :--- |
 | **Images** | 62 | ~62 (SigLIP 768d) | — | ~20.5 MB |
-| **Videos** | 18 | ~200 (SigLIP 768d keyframes) | ~30 (`faster-whisper` + MiniLM 384d) | ~769.5 MB |
+| **Videos** | 28 | ~350 (SigLIP 768d keyframes) | ~80 (`faster-whisper` + MiniLM 384d) | ~1215.7 MB |
 | **Documents (PDF)** | 9 (~50 pages) | ~50 (SigLIP 768d page renders) | ~50 (MiniLM 384d + FTS5 BM25) | ~17.9 MB |
-| **Total** | **89 files** | **~312 visual embeddings** | **~80 text embeddings** | **~808 MB** |
+| **Total** | **99 files** | **~462 visual embeddings** | **~130 text embeddings** | **~1.25 GB** |
 
-*Estimated Total Content Chunks*: **~392 chunks** (312 visual frame/page/image chunks + 80 dense text and speech transcript chunks).
+*Estimated Total Content Chunks*: **~592 chunks** (462 visual frame/page/image chunks + 130 dense text and speech transcript chunks).
 
 > **Note**: Exact chunk counts depend on video duration/keyframe deduplication and PDF page count. Re-run `python scripts/reindex_real_dataset.py` after downloading to get live counts from the catalog.
 
