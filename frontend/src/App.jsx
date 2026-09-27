@@ -20,11 +20,13 @@ import {
 import './App.css';
 
 const QUICK_PROMPTS = [
+  "Instructor explaining code on a whiteboard",
+  "Terminal window with C++ compilation output",
+  "Slide showing time complexity Big O notation",
+  "Video where someone runs a Python script",
+  "OOP concepts like classes and inheritance explained",
+  "Data structures like linked list or binary tree diagram",
   "A woman standing with a cat",
-  "Videos containing construction activity",
-  "Images showing a modern living room",
-  "Multi-head attention architecture",
-  "Deep residual learning on ImageNet",
   "Hot morning beverage with latte art"
 ];
 
@@ -51,27 +53,55 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [indexStatus, setIndexStatus] = useState(null);
+  const [showStatusBanner, setShowStatusBanner] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const videoRef = useRef(null);
   const pollIntervalRef = useRef(null);
+  const bannerDismissRef = useRef(null);
+  // Track whether the user triggered indexing in THIS browser session.
+  // We never show the banner for stale DB state on a cold page load.
+  const sessionIndexTriggeredRef = useRef(false);
 
-  // Poll indexing status
-  const fetchIndexStatus = async () => {
+  // Fetch indexing status once; only start polling if status is RUNNING
+  const fetchIndexStatus = async (startPolling = false) => {
     try {
       const res = await fetch('/api/index/status');
       if (res.ok) {
         const data = await res.json();
         setIndexStatus(data);
-        if (data.status === 'RUNNING') {
+
+        const isTerminal = data.status === 'COMPLETED' || data.status === 'FAILED';
+        const isRunning  = data.status === 'RUNNING';
+
+        // Only show the banner if the user triggered a scan this session,
+        // or if indexing is actively running (covers the case where the page
+        // was refreshed mid-run).
+        if (isRunning || sessionIndexTriggeredRef.current) {
+          setShowStatusBanner(true);
+        }
+
+        if (isRunning) {
+          // Auto-poll only when indexing is genuinely active
           if (!pollIntervalRef.current) {
-            pollIntervalRef.current = setInterval(fetchIndexStatus, 1500);
+            pollIntervalRef.current = setInterval(() => fetchIndexStatus(false), 1500);
+          }
+          // Cancel any pending auto-dismiss while running
+          if (bannerDismissRef.current) {
+            clearTimeout(bannerDismissRef.current);
+            bannerDismissRef.current = null;
           }
         } else {
+          // Stop polling for terminal / idle states
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
+          }
+          // Auto-dismiss the banner after 4 s for terminal states
+          if (isTerminal && sessionIndexTriggeredRef.current) {
+            if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
+            bannerDismissRef.current = setTimeout(() => setShowStatusBanner(false), 4000);
           }
         }
       }
@@ -83,6 +113,7 @@ export default function App() {
   // Load all assets or run search
   const loadAssets = async (type = filterType) => {
     setLoading(true);
+    setResults([]);          // clear stale results immediately
     try {
       const res = await fetch(`/api/assets?limit=50&type=${type}`);
       if (res.ok) {
@@ -117,6 +148,7 @@ export default function App() {
       return;
     }
     setLoading(true);
+    setResults([]);          // clear stale results immediately
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}&type=${type}&limit=30`);
       if (res.ok) {
@@ -133,6 +165,7 @@ export default function App() {
   };
 
   const triggerIndexing = async () => {
+    sessionIndexTriggeredRef.current = true;  // mark session as user-initiated
     try {
       const res = await fetch('/api/index/start', {
         method: 'POST',
@@ -157,10 +190,14 @@ export default function App() {
   };
 
   useEffect(() => {
+    // On mount: fetch status once (shows last-run banner if needed) and load assets.
+    // We do NOT start a polling loop here — polling only activates when the
+    // user clicks "Scan Media Folder" and the server responds with RUNNING.
     fetchIndexStatus();
     loadAssets('all');
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
     };
   }, []);
 
@@ -185,12 +222,8 @@ export default function App() {
   };
 
   // Video auto-seek when modal opens
-  useEffect(() => {
-    if (selectedAsset && selectedAsset.file_type === 'VIDEO' && videoRef.current) {
-      const ts = selectedAsset.matched_timestamp_sec || 0;
-      videoRef.current.currentTime = ts;
-    }
-  }, [selectedAsset]);
+  // Video seek is now handled via onLoadedMetadata on the <video> element below.
+  // Setting currentTime here (before metadata loads) was silently dropped by the browser.
 
   const isIndexingRunning = indexStatus?.status === 'RUNNING';
 
@@ -225,8 +258,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Indexing Progress Banner */}
-      {indexStatus && indexStatus.status !== 'IDLE' && (
+      {/* Indexing Progress Banner — shown while RUNNING, or briefly after COMPLETED/FAILED */}
+      {indexStatus && indexStatus.status !== 'IDLE' && showStatusBanner && (
         <section className="status-panel">
           <div className="status-panel-header">
             <div className="status-title">
@@ -252,6 +285,23 @@ export default function App() {
                 <span className="metric-tag">
                   <strong>{indexStatus.duplicate_files}</strong> duplicate
                 </span>
+              )}
+              {/* Manual dismiss — only for terminal states, not while running */}
+              {!isIndexingRunning && (
+                <button
+                  onClick={() => {
+                    if (bannerDismissRef.current) clearTimeout(bannerDismissRef.current);
+                    setShowStatusBanner(false);
+                  }}
+                  title="Dismiss"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-muted)', marginLeft: 8, padding: '0 2px',
+                    display: 'flex', alignItems: 'center'
+                  }}
+                >
+                  <X size={14} />
+                </button>
               )}
             </div>
           </div>
@@ -330,8 +380,21 @@ export default function App() {
         </div>
       </div>
 
-      {/* Results Grid */}
-      {results.length > 0 ? (
+      {/* Results Grid — show skeleton cards while loading, real cards after */}
+      {loading ? (
+        <div className="results-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="asset-card skeleton-card">
+              <div className="card-media-wrapper skeleton-media" />
+              <div className="card-body">
+                <div className="skeleton-line skeleton-title" />
+                <div className="skeleton-line skeleton-meta" />
+                <div className="skeleton-line skeleton-explanation" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : results.length > 0 ? (
         <div className="results-grid">
           {results.map((asset) => {
             const isVideo = asset.file_type === 'VIDEO';
@@ -435,14 +498,32 @@ export default function App() {
                   />
                 )}
 
-                {selectedAsset.file_type === 'VIDEO' && (
-                  <video
-                    ref={videoRef}
-                    src={selectedAsset.preview_url}
-                    controls
-                    autoPlay
-                  />
-                )}
+                {selectedAsset.file_type === 'VIDEO' && (() => {
+                  const ts = selectedAsset.matched_timestamp_sec || 0;
+                  // Media Fragments URI: appending #t=N makes Chrome issue a
+                  // byte-range request starting at that timestamp directly.
+                  // Works for faststart MP4s; poster covers end-moov files.
+                  const videoSrc = `${selectedAsset.preview_url}#t=${Math.floor(ts)}`;
+                  let _seekDone = false;
+                  const doSeek = () => {
+                    if (_seekDone || !videoRef.current) return;
+                    _seekDone = true;
+                    videoRef.current.currentTime = ts;
+                    videoRef.current.play().catch(() => {});
+                  };
+                  return (
+                    <video
+                      ref={videoRef}
+                      key={selectedAsset.asset_id}
+                      src={videoSrc}
+                      poster={selectedAsset.thumbnail_url}
+                      controls
+                      onLoadedMetadata={doSeek}
+                      onCanPlay={doSeek}
+                    />
+                  );
+                })()}
+
 
                 {selectedAsset.file_type === 'PDF' && (
                   <iframe

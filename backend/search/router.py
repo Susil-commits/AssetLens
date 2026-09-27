@@ -12,6 +12,34 @@ from backend.search.ranking import execute_hybrid_search
 
 CHUNK_SIZE = 1024 * 64  # 64 KB streaming chunks
 
+# Explicit MIME overrides — Windows registry is often missing or wrong for
+# these common media types, which causes the browser to refuse playback.
+_MIME_OVERRIDES: dict[str, str] = {
+    ".mp4":  "video/mp4",
+    ".m4v":  "video/mp4",
+    ".mkv":  "video/x-matroska",
+    ".webm": "video/webm",
+    ".mov":  "video/quicktime",
+    ".avi":  "video/x-msvideo",
+    ".wmv":  "video/x-ms-wmv",
+    ".flv":  "video/x-flv",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png":  "image/png",
+    ".webp": "image/webp",
+    ".gif":  "image/gif",
+    ".pdf":  "application/pdf",
+}
+
+
+def _get_mime(file_path: Path) -> str:
+    """Returns the correct MIME type, with a hard-coded fallback for common
+    formats that Windows often misidentifies."""
+    ext = file_path.suffix.lower()
+    if ext in _MIME_OVERRIDES:
+        return _MIME_OVERRIDES[ext]
+    guessed, _ = mimetypes.guess_type(file_path)
+    return guessed or "application/octet-stream"
 
 def _stream_with_range(file_path: Path, request: Request, mime_type: str, filename: str) -> Response:
     """Fix 2: Serve a file with HTTP Range (byte-range) support for seekable video playback.
@@ -98,9 +126,7 @@ def serve_media_file(asset_id: str, request: Request, db: Session = Depends(get_
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found on disk: {file_path}")
 
-    mime_type, _ = mimetypes.guess_type(file_path)
-    if not mime_type:
-        mime_type = "application/octet-stream"
+    mime_type = _get_mime(file_path)
 
     return _stream_with_range(file_path, request, mime_type, asset.filename)
 
