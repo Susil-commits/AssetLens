@@ -1,9 +1,12 @@
 import re
+import logging
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from backend.models import Asset, ContentChunk
 from backend.search.query_parser import extract_content_keywords, ALL_FILTER_WORDS
+
+logger = logging.getLogger("assetlens.keyword_search")
 
 def search_keyword(query: str, db: Session, file_type_filter: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
     """Performs full-text keyword search via SQLite FTS5 table and filename matching."""
@@ -50,8 +53,8 @@ def search_keyword(query: str, db: Session, file_type_filter: Optional[str] = No
                     "path": asset.path,
                     "source": "keyword"
                 })
-        except Exception:
-            pass
+        except Exception as fts_err:
+            logger.warning(f"FTS5 keyword search failed for query '{clean_q}': {fts_err}")
 
     # 2. Filename substring matching
     words = [w.lower() for w in re.findall(r"\b[a-zA-Z0-9]+\b", query) if len(w) > 2 and w.lower() not in ALL_FILTER_WORDS]

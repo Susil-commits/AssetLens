@@ -6,7 +6,7 @@ This document describes the benchmark multimodal dataset curated, indexed, and e
 
 ## 1. Dataset Overview
 
-AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing dataset** covering **3 core modalities** across **77 files totalling ~211.7 MB**:
+AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing dataset** covering **3 core modalities** across **89 files totalling ~808 MB**:
 
 - **Images (62 files)**: High-resolution 1920 px photos (Unsplash CC0) spanning residential interiors (living rooms, bedrooms, kitchens, bathrooms, home offices), real estate exteriors (aerial, rooftop, garden), active construction sites (workers, scaffolding, blueprints, concrete pours), nature/landscapes (aurora, desert dunes, lavender fields, waterfalls, forests), people/lifestyle (yoga, chef, scientist, surfer), technology (servers, drones, laptops), food, animals, and urban cityscapes.
 - **Videos (7 files, MP4)**: Dynamic temporal footage combining visual keyframe sampling and speech transcription:
@@ -23,11 +23,11 @@ AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing da
 | Modality | File Count | Estimated Visual Chunks | Estimated Text Chunks | Storage Size |
 | :--- | :--- | :--- | :--- | :--- |
 | **Images** | 62 | ~62 (SigLIP 768d) | — | ~20.5 MB |
-| **Videos** | 7 | ~90 (SigLIP 768d keyframes) | ~15 (`faster-whisper` + MiniLM 384d) | ~180.5 MB |
-| **Documents (PDF)** | 8 (~40 pages) | ~40 (SigLIP 768d page renders) | ~40 (MiniLM 384d + FTS5 BM25) | ~10.7 MB |
-| **Total** | **77 files** | **~192 visual embeddings** | **~55 text embeddings** | **~211.7 MB** |
+| **Videos** | 18 | ~200 (SigLIP 768d keyframes) | ~30 (`faster-whisper` + MiniLM 384d) | ~769.5 MB |
+| **Documents (PDF)** | 9 (~50 pages) | ~50 (SigLIP 768d page renders) | ~50 (MiniLM 384d + FTS5 BM25) | ~17.9 MB |
+| **Total** | **89 files** | **~312 visual embeddings** | **~80 text embeddings** | **~808 MB** |
 
-*Estimated Total Content Chunks*: **~247 chunks** (192 visual frame/page/image chunks + 55 dense text and speech transcript chunks).
+*Estimated Total Content Chunks*: **~392 chunks** (312 visual frame/page/image chunks + 80 dense text and speech transcript chunks).
 
 > **Note**: Exact chunk counts depend on video duration/keyframe deduplication and PDF page count. Re-run `python scripts/reindex_real_dataset.py` after downloading to get live counts from the catalog.
 

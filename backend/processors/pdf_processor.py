@@ -58,25 +58,28 @@ def process_pdf_asset(asset: Asset, db: Session) -> List[ContentChunk]:
             page_num = page_idx + 1
             page = doc[page_idx]
 
-            # A. Render Page Image for Visual Search & Preview
+            # Render Page Image for Visual Search & Preview
             pix = page.get_pixmap(dpi=150)
             img_bytes = pix.tobytes("jpeg")
-            page_pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
-            # Save cover thumbnail (page 1)
+            # Full-res image for SigLIP embedding (MUST be done before any thumbnail() call)
+            full_res_pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+            # Save cover thumbnail (page 1) — use a copy so full_res_pil stays intact
             if page_idx == 0:
                 thumb_path = settings.THUMBNAILS_DIR / f"{asset.id}.jpg"
-                page_pil.thumbnail((320, 320), Image.Resampling.LANCZOS)
-                page_pil.save(thumb_path, "JPEG", quality=85)
+                cover_copy = full_res_pil.copy()
+                cover_copy.thumbnail((320, 320), Image.Resampling.LANCZOS)
+                cover_copy.save(thumb_path, "JPEG", quality=85)
 
-            # Save individual page preview
+            # Save individual page preview thumbnail
             page_preview_path = settings.THUMBNAILS_DIR / f"{asset.id}_p{page_num}.jpg"
-            preview_copy = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            preview_copy = full_res_pil.copy()
             preview_copy.thumbnail((800, 800), Image.Resampling.LANCZOS)
             preview_copy.save(page_preview_path, "JPEG", quality=85)
 
-            # Visual Embedding for Page
-            page_visual_vec = model_manager.encode_image(page_pil)
+            # Visual Embedding for Page — on full-resolution image
+            page_visual_vec = model_manager.encode_image(full_res_pil)
             visual_chunk_id = str(uuid.uuid4())
             visual_chunk = ContentChunk(
                 id=visual_chunk_id,
