@@ -15,6 +15,12 @@
 
 </div>
 
+   </div>
+
+   ## Demo
+
+   ![AssetLens Demo](./Demo.mp4)
+   
 ---
 
 ## 1. System Architecture
