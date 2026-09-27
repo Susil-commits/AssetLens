@@ -133,7 +133,7 @@ AssetLens returns dynamic explanations for why an item matched:
 
 ## 4. Benchmark Retrieval Evaluation
 
-Evaluation performed on a real local catalog of 31 multimodal assets (53 visual embeddings, 19 dense text and speech transcript embeddings, 72 SQLite content chunks) across 13 diverse search tasks including the assignment's literal benchmark queries.
+Evaluation performed on a real local catalog of **77 multimodal assets (~211.7 MB)** — 62 high-resolution images, 7 videos (Blender open movies + original dataset), and 8 PDF documents (real-estate brochures + arXiv ML papers) — yielding an estimated **~247 content chunks** (~192 visual SigLIP embeddings, ~55 dense text/speech embeddings, full SQLite FTS5 BM25 index) across 13 diverse search tasks including the assignment's literal benchmark queries.
 
 | Benchmark Metric | Observed Score | Baseline Standard | Status |
 | :--- | :--- | :--- | :--- |

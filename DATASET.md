@@ -6,23 +6,30 @@ This document describes the benchmark multimodal dataset curated, indexed, and e
 
 ## 1. Dataset Overview
 
-AssetLens is calibrated on a real-estate and multimodal marketing dataset covering **3 core modalities**:
-- **Images (25 files)**: Verified high-resolution photos and architectural layouts covering contemporary residential interiors (living rooms, bedrooms, kitchens), floor plan schematics, community amenities (swimming pool, gym), active construction sites, home purchase closing, and negative/cross-modal test concepts.
-- **Videos (3 files, MP4)**: Dynamic temporal video footage capturing both visual motion and spoken dialogue:
+AssetLens is benchmarked on a **real-estate, nature, and multimodal marketing dataset** covering **3 core modalities** across **77 files totalling ~211.7 MB**:
+
+- **Images (62 files)**: High-resolution 1920 px photos (Unsplash CC0) spanning residential interiors (living rooms, bedrooms, kitchens, bathrooms, home offices), real estate exteriors (aerial, rooftop, garden), active construction sites (workers, scaffolding, blueprints, concrete pours), nature/landscapes (aurora, desert dunes, lavender fields, waterfalls, forests), people/lifestyle (yoga, chef, scientist, surfer), technology (servers, drones, laptops), food, animals, and urban cityscapes.
+- **Videos (7 files, MP4)**: Dynamic temporal footage combining visual keyframe sampling and speech transcription:
   - A spoken **Customer Testimonial Video** with timestamped dialogue transcribed via `faster-whisper`.
   - An **Industrial Construction Zone** video showing machinery and workers.
   - An **Outdoor Pedestrian Motion** video capturing sidewalk movement.
-- **Documents (3 files, multi-page PDF)**: Real-estate brochures, architectural layout booklets, and floor-plan documents containing rich textual specifications ("3 BHK", "amenities", "Phase 2", "swimming pool", "residential project") and full-color page layouts.
+  - **Big Buck Bunny** (Blender Foundation CC BY) — animated film featuring forest and animals.
+  - **Elephants Dream** (Blender Foundation CC BY) — surreal animated short film.
+  - **Sintel Trailer** (Blender Foundation CC BY) — fantasy outdoor animated trailer.
+  - **Nature Wildlife Documentary** (Pexels free license) — wildlife footage.
+- **Documents (8 files, multi-page PDF)**: Three domain-specific real-estate brochures ("3 BHK", "amenities", "swimming pool") plus five open-access academic papers (Attention/Transformer, ResNet, BERT, GAN, CLIP) containing dense technical text, mathematical notation, and figure-rich layouts.
 
 ### Summary Metrics
-| Modality | File Count | Extracted Visual Chunks | Extracted Text Chunks | Storage Size |
+| Modality | File Count | Estimated Visual Chunks | Estimated Text Chunks | Storage Size |
 | :--- | :--- | :--- | :--- | :--- |
-| **Images** | 25 | 25 (SigLIP 768d) | — | ~2.03 MB |
-| **Videos** | 3 | 18 (SigLIP 768d keyframes) | 9 (`faster-whisper` + MiniLM 384d) | ~18.98 MB |
-| **Documents (PDF)** | 3 (10 pages) | 10 (SigLIP 768d page renders) | 10 (MiniLM 384d + FTS5 BM25) | ~0.01 MB |
-| **Total** | **31 files** | **53 visual embeddings** | **19 text embeddings** | **~21.02 MB** |
+| **Images** | 62 | ~62 (SigLIP 768d) | — | ~20.5 MB |
+| **Videos** | 7 | ~90 (SigLIP 768d keyframes) | ~15 (`faster-whisper` + MiniLM 384d) | ~180.5 MB |
+| **Documents (PDF)** | 8 (~40 pages) | ~40 (SigLIP 768d page renders) | ~40 (MiniLM 384d + FTS5 BM25) | ~10.7 MB |
+| **Total** | **77 files** | **~192 visual embeddings** | **~55 text embeddings** | **~211.7 MB** |
 
-*Total Content Chunks in SQLite Catalog*: **72 chunks** (53 visual frame/page/image chunks + 19 dense text and speech transcript chunks).
+*Estimated Total Content Chunks*: **~247 chunks** (192 visual frame/page/image chunks + 55 dense text and speech transcript chunks).
+
+> **Note**: Exact chunk counts depend on video duration/keyframe deduplication and PDF page count. Re-run `python scripts/reindex_real_dataset.py` after downloading to get live counts from the catalog.
 
 ---
 
