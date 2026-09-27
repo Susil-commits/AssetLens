@@ -230,7 +230,7 @@ python scripts/run_evaluation.py
 
 ---
 
-##8. Future View
+## 8. Future View
 
 The main thing I could not complete was collecting the full 5–10 GB dataset mentioned in the assignment. I worked with a smaller but still fairly large dataset of around 4.34 GB containing images, videos, and PDF documents. I chose this approach because processing the full dataset would take more storage and processing time, while the smaller dataset was enough to build and properly test the complete ingestion and search flow.
 
