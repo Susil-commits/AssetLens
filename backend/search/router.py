@@ -33,8 +33,8 @@ _MIME_OVERRIDES: dict[str, str] = {
 
 
 def _get_mime(file_path: Path) -> str:
-    """Returns the correct MIME type, with a hard-coded fallback for common
-    formats that Windows often misidentifies."""
+    """Returns the correct MIME type, with hard-coded fallbacks for formats
+    that Windows often misidentifies."""
     ext = file_path.suffix.lower()
     if ext in _MIME_OVERRIDES:
         return _MIME_OVERRIDES[ext]
@@ -117,12 +117,22 @@ def search_assets(
 
 @router.get("/media/{asset_id}")
 def serve_media_file(asset_id: str, request: Request, db: Session = Depends(get_db)):
-    """Streams the original media file with HTTP Range support for seekable video playback."""
+    """Streams the original media file with HTTP Range support for seekable video playback.
+    For MPEG-TS files re-muxed during indexing, serves the seekable faststart MP4 instead.
+    """
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     file_path = Path(asset.path)
+
+    # If this video was re-muxed from MPEG-TS to faststart MP4 during indexing,
+    # serve the remuxed file so the browser can seek to matched timestamps.
+    if asset.error_category and asset.error_category.startswith("__remuxed__:"):
+        remuxed_path = Path(asset.error_category.split("__remuxed__:", 1)[1])
+        if remuxed_path.is_file():
+            file_path = remuxed_path
+
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found on disk: {file_path}")
 

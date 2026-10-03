@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 from PIL import Image
 import logging
+import subprocess
+import imageio_ffmpeg
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from backend.config import settings
@@ -15,6 +17,49 @@ from backend.ai.transcription import transcriber
 from backend.database_vectors import vector_db
 
 logger = logging.getLogger("assetlens.video_processor")
+
+_MPEGTS_SYNC_BYTE = b"\x47"
+
+def _is_mpeg_ts(file_path: Path) -> bool:
+    """Returns True if the file is an MPEG-TS stream (sync byte 0x47 at offset 0)."""
+    try:
+        with open(file_path, "rb") as f:
+            return f.read(1) == _MPEGTS_SYNC_BYTE
+    except OSError:
+        return False
+
+def _remux_to_mp4(src: Path, dst: Path) -> bool:
+    """Re-muxes an MPEG-TS file to a seekable faststart MP4 using FFmpeg.
+    Uses stream-copy (no re-encoding) — very fast, no quality loss.
+    Returns True on success."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists():
+        return True  # already done
+    try:
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        result = subprocess.run(
+            [
+                ffmpeg_exe, "-y",
+                "-i", str(src),
+                "-c", "copy",          # stream copy — no re-encoding
+                "-movflags", "+faststart",  # moov atom at front for instant seek
+                "-f", "mp4",
+                str(dst),
+            ],
+            capture_output=True,
+            timeout=300,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                f"FFmpeg re-mux failed for {src.name}: "
+                f"{result.stderr.decode(errors='replace')[-400:]}"
+            )
+            return False
+        logger.info(f"Re-muxed MPEG-TS → MP4 faststart: {dst.name}")
+        return True
+    except Exception as e:
+        logger.warning(f"Re-mux error for {src.name}: {e}")
+        return False
 
 def compute_sample_timestamps(duration_sec: float) -> List[float]:
     """Computes keyframe sample timestamps according to video duration."""
@@ -64,12 +109,32 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
     Extracts sampled keyframes, eliminates near-identical frames,
     generates cover and timestamped preview thumbnails, computes SigLIP embeddings,
     and indexes into SQLite content_chunks and LanceDB visual_embeddings.
+
+    For MPEG-TS files disguised as .mp4 (detected by sync byte 0x47), the file
+    is re-muxed to a seekable faststart MP4 in derived/remuxed/ so the browser
+    can seek to matched timestamps.
     """
     file_path = Path(asset.path)
     if not file_path.is_file():
         raise FileNotFoundError(f"Video file does not exist: {file_path}")
 
-    # 1. Clean previous chunks for this asset
+    # Re-mux MPEG-TS streams to seekable MP4 so the browser can seek them.
+    # The original file is never modified; the remux lives in derived/remuxed/.
+    remuxed_dir = settings.DERIVED_DIR / "remuxed"
+    remuxed_path = remuxed_dir / (file_path.stem + "__remuxed.mp4")
+    source_for_cv = file_path
+
+    if _is_mpeg_ts(file_path):
+        if _remux_to_mp4(file_path, remuxed_path):
+            source_for_cv = remuxed_path
+            # Store remuxed path in asset so the media endpoint can serve it
+            asset.error_message = None
+            # Use a sentinel comment in error_category to track remux path
+            # (reusing an existing nullable column rather than a schema change)
+            asset.error_category = f"__remuxed__:{remuxed_path}"
+        else:
+            logger.warning(f"Re-mux failed for {file_path.name}; will use original (seek may not work).")
+
     vector_db.delete_asset_chunks(asset.id)
     db.query(ContentChunk).filter(ContentChunk.asset_id == asset.id).delete()
     try:
@@ -80,9 +145,9 @@ def process_video_asset(asset: Asset, db: Session) -> List[ContentChunk]:
     except Exception:
         pass
 
-    cap = cv2.VideoCapture(str(file_path))
+    cap = cv2.VideoCapture(str(source_for_cv))
     if not cap.isOpened():
-        raise RuntimeError(f"Could not open video file: {file_path}")
+        raise RuntimeError(f"Could not open video file: {source_for_cv}")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0

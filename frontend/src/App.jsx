@@ -500,17 +500,10 @@ export default function App() {
 
                 {selectedAsset.file_type === 'VIDEO' && (() => {
                   const ts = selectedAsset.matched_timestamp_sec || 0;
-                  // Media Fragments URI: appending #t=N makes Chrome issue a
-                  // byte-range request starting at that timestamp directly.
-                  // Works for faststart MP4s; poster covers end-moov files.
-                  const videoSrc = `${selectedAsset.preview_url}#t=${Math.floor(ts)}`;
-                  let _seekDone = false;
-                  const doSeek = () => {
-                    if (_seekDone || !videoRef.current) return;
-                    _seekDone = true;
-                    videoRef.current.currentTime = ts;
-                    videoRef.current.play().catch(() => {});
-                  };
+                  // Do NOT use #t= Media Fragment in the src URL.
+                  // Some files (MPEG-TS streams with .mp4 extension) are not seekable —
+                  // we check seekable.length before attempting currentTime assignment.
+                  const videoSrc = selectedAsset.preview_url;
                   return (
                     <video
                       ref={videoRef}
@@ -518,8 +511,28 @@ export default function App() {
                       src={videoSrc}
                       poster={selectedAsset.thumbnail_url}
                       controls
-                      onLoadedMetadata={doSeek}
-                      onCanPlay={doSeek}
+                      preload="metadata"
+                      onLoadedMetadata={() => {
+                        const vid = videoRef.current;
+                        if (!vid) return;
+                        // Only seek if the browser reports a seekable range that
+                        // includes the target timestamp (MP4 faststart or range-served).
+                        // MPEG-TS streams have an empty seekable range — skip seek.
+                        if (ts > 0 && vid.seekable.length > 0 && vid.seekable.end(0) >= ts) {
+                          vid.currentTime = ts;
+                        }
+                        vid.play().catch(() => {});
+                      }}
+                      onError={(e) => {
+                        const code = e.target?.error?.code;
+                        const msgs = {
+                          1: 'Playback aborted',
+                          2: 'Network error while loading video',
+                          3: 'Video decoding failed — format may be unsupported',
+                          4: 'Video format or MIME type is not supported by this browser',
+                        };
+                        console.warn('Video error:', msgs[code] || 'Unknown error', e.target?.error);
+                      }}
                     />
                   );
                 })()}
